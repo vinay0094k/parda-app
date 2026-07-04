@@ -1,20 +1,23 @@
-const noteInput = document.getElementById('note-input')
+const messageInput = document.getElementById('message-input')
+const sendBtn = document.getElementById('send-btn')
 const lockBtn = document.getElementById('btn-lock')
 const hideBtn = document.getElementById('btn-hide')
 const shieldBtn = document.getElementById('btn-shield')
 const lockIcon = document.getElementById('lock-icon')
 const lockLabel = document.getElementById('lock-label')
 const savedIndicator = document.getElementById('saved-indicator')
+const listeningSection = document.getElementById('listening-section')
+const responseSection = document.getElementById('response-section')
+const responseText = document.getElementById('response-text')
+const responseAvatar = document.getElementById('response-avatar')
+const waveformCanvas = document.getElementById('waveform-canvas')
+const ctx = waveformCanvas.getContext('2d')
 
-let saveTimer = null
 let isClickThrough = true
 let isCaptureProtected = true
-
-window.parda.getNotes().then((content) => {
-  if (content) {
-    noteInput.value = content
-  }
-})
+let isListening = false
+let animationFrameId = null
+let waveformPhase = 0
 
 window.parda.getClickThrough().then((val) => {
   isClickThrough = val
@@ -32,14 +35,16 @@ function updateUI() {
     lockIcon.textContent = '🔓'
     lockLabel.textContent = 'click-through'
     document.body.classList.remove('interactive')
-    noteInput.disabled = true
+    messageInput.disabled = true
+    sendBtn.disabled = true
   } else {
     lockBtn.textContent = '🔒'
     lockIcon.textContent = '🔒'
     lockLabel.textContent = 'interactive'
     document.body.classList.add('interactive')
-    noteInput.disabled = false
-    noteInput.focus()
+    messageInput.disabled = false
+    sendBtn.disabled = false
+    messageInput.focus()
   }
 }
 
@@ -49,17 +54,89 @@ function updateShieldUI() {
   shieldBtn.title = (isCaptureProtected ? 'Protected' : 'Unprotected') + ' from screen capture (Ctrl+Shift+H)'
 }
 
-function saveNotes() {
-  savedIndicator.textContent = 'saving...'
-  clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
-    window.parda.saveNotes(noteInput.value)
-    savedIndicator.textContent = 'saved'
-    setTimeout(() => { savedIndicator.textContent = '' }, 1500)
-  }, 400)
+function drawWaveform() {
+  const width = waveformCanvas.width
+  const height = waveformCanvas.height
+  const centerY = height / 2
+
+  ctx.fillStyle = 'rgba(10, 10, 20, 0.3)'
+  ctx.fillRect(0, 0, width, height)
+
+  ctx.strokeStyle = 'rgba(100, 180, 255, 0.6)'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+
+  const bars = 60
+  const barWidth = width / bars
+
+  for (let i = 0; i < bars; i++) {
+    const phase = (waveformPhase + i * 0.1) % (Math.PI * 2)
+    const amplitude = (Math.sin(phase) * 0.5 + 0.5) * (centerY * 0.7)
+    const x = i * barWidth + barWidth / 2
+
+    ctx.moveTo(x, centerY - amplitude)
+    ctx.lineTo(x, centerY + amplitude)
+  }
+
+  ctx.stroke()
+  waveformPhase += 0.05
 }
 
-noteInput.addEventListener('input', saveNotes)
+function animateWaveform() {
+  if (isListening) {
+    drawWaveform()
+    animationFrameId = requestAnimationFrame(animateWaveform)
+  }
+}
+
+function setListening(state) {
+  isListening = state
+  if (state) {
+    listeningSection.classList.remove('section-hidden')
+    waveformCanvas.width = waveformCanvas.offsetWidth
+    waveformCanvas.height = waveformCanvas.offsetHeight
+    animateWaveform()
+  } else {
+    listeningSection.classList.add('section-hidden')
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId)
+    }
+  }
+}
+
+function sendMessage() {
+  const text = messageInput.value.trim()
+  if (!text) return
+
+  responseText.textContent = text
+  responseAvatar.textContent = '👤'
+  responseSection.querySelector('#response-message').classList.remove('response-empty')
+
+  messageInput.value = ''
+  messageInput.focus()
+
+  setListening(true)
+  setTimeout(() => {
+    const responses = [
+      'Got it. Let me process that.',
+      'That\'s helpful information.',
+      'I\'m analyzing your request.',
+      'Processing complete.',
+      'Ready for more.'
+    ]
+    const response = responses[Math.floor(Math.random() * responses.length)]
+    responseText.textContent = response
+    responseAvatar.textContent = '🤖'
+    setListening(false)
+  }, 2000)
+}
+
+sendBtn.addEventListener('click', sendMessage)
+messageInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    sendMessage()
+  }
+})
 
 lockBtn.addEventListener('click', () => {
   window.parda.toggleClickThrough()
@@ -114,3 +191,7 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('mouseup', () => {
   resizing = false
 })
+
+// Set initial UI state
+updateUI()
+updateShieldUI()

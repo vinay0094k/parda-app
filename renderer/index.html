@@ -19,7 +19,41 @@
         <button id="btn-hide" title="Hide (Ctrl+Shift+P)">—</button>
       </div>
     </div>
-    <textarea id="note-input" placeholder="Type a note..." spellcheck="false"></textarea>
+
+    <div id="voice-container">
+      <!-- Listening Section -->
+      <div id="listening-section" class="section-hidden">
+        <div id="listening-title">Listening...</div>
+        <div id="waveform-container">
+          <canvas id="waveform-canvas"></canvas>
+          <div id="mic-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 1a4 4 0 0 0-4 4v7a4 4 0 0 0 8 0V5a4 4 0 0 0-4-4z"/>
+              <path d="M8 19a6 6 0 0 0 8 0m-8 3h8"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Response Section -->
+      <div id="response-section">
+        <div id="response-header">
+          <span id="response-icon">🤖</span>
+          <span id="response-label">AI Response</span>
+        </div>
+        <div id="response-message" class="response-empty">
+          <div id="response-avatar"></div>
+          <div id="response-text">Awaiting input...</div>
+        </div>
+      </div>
+
+      <!-- Input Section -->
+      <div id="input-section">
+        <input type="text" id="message-input" placeholder="Tap to enter your message..." spellcheck="false">
+        <button id="send-btn">🎤</button>
+      </div>
+    </div>
+
     <div id="resize-handle"></div>
     <div id="footer">
       <span id="saved-indicator"></span>
