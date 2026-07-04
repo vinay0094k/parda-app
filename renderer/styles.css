@@ -392,3 +392,65 @@ body.interactive #card {
 #opacity-slider:disabled::-webkit-slider-thumb {
   cursor: not-allowed;
 }
+
+#btn-key {
+  font-size: 14px;
+  position: relative;
+}
+
+#btn-key.has-key {
+  color: rgba(100, 255, 130, 0.7);
+}
+
+#btn-key.no-key {
+  color: rgba(255, 100, 100, 0.7);
+}
+
+#key-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 4px;
+  flex-shrink: 0;
+}
+
+#key-panel.hidden {
+  display: none;
+}
+
+#key-input {
+  flex: 1;
+  background: rgba(100, 180, 255, 0.08);
+  border: 1px solid rgba(100, 180, 255, 0.15);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#key-input:focus {
+  border-color: rgba(100, 180, 255, 0.5);
+  box-shadow: 0 0 8px rgba(100, 180, 255, 0.2);
+}
+
+#key-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 11px;
+}
+
+#key-status {
+  font-size: 10px;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+#key-status.ok {
+  color: rgba(100, 255, 130, 0.6);
+}
+
+#key-status.err {
+  color: rgba(255, 100, 100, 0.6);
+}

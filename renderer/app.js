@@ -13,6 +13,10 @@ const waveformCanvas = document.getElementById('waveform-canvas')
 const ctx = waveformCanvas.getContext('2d')
 const dragHandle = document.getElementById('drag-handle')
 const opacitySlider = document.getElementById('opacity-slider')
+const keyBtn = document.getElementById('btn-key')
+const keyPanel = document.getElementById('key-panel')
+const keyInput = document.getElementById('key-input')
+const keyStatus = document.getElementById('key-status')
 
 let isClickThrough = true
 let isListening = false
@@ -24,34 +28,50 @@ let dragStartY = 0
 let dragStartWinX = 0
 let dragStartWinY = 0
 
-// OpenAI / OpenRouter API configuration
-const PLACEHOLDER_PREFIXES = ['sk-proj-PASTE', 'sk-proj-YOUR']
+// API key management (UI-based, no config file dependency)
+const getAPIKey = () => localStorage.getItem('openai_api_key') || ''
 
-const isPlaceholder = (key) => {
-  return PLACEHOLDER_PREFIXES.some(p => key.startsWith(p))
+const detectProvider = (key) => {
+  if (key.startsWith('sk-or-v1')) return 'openrouter'
+  if (key.startsWith('sk-proj')) return 'openai'
+  return null
 }
 
-const getAPIKey = () => {
-  const stored = localStorage.getItem('openai_api_key')
-  if (stored && !isPlaceholder(stored)) return stored
-  const provider = window.__appConfig?.provider || 'openai'
-  const keyField = provider === 'openrouter' ? 'openrouter_api_key' : 'openai_api_key'
-  const configKey = window.__appConfig?.[keyField] || ''
-  if (configKey && !isPlaceholder(configKey)) return configKey
-  return ''
+const getActiveProvider = () => {
+  return detectProvider(getAPIKey()) || window.__appConfig?.provider || 'openai'
 }
 
 const getAPIBase = () => {
-  const provider = window.__appConfig?.provider || 'openai'
-  if (provider === 'openrouter') {
-    return 'https://openrouter.ai/api/v1/chat/completions'
-  }
-  return 'https://api.openai.com/v1/chat/completions'
+  return getActiveProvider() === 'openrouter'
+    ? 'https://openrouter.ai/api/v1/chat/completions'
+    : 'https://api.openai.com/v1/chat/completions'
 }
 
 const getProviderName = () => {
-  const p = window.__appConfig?.provider || 'openai'
-  return p === 'openrouter' ? 'OpenRouter' : 'OpenAI'
+  return getActiveProvider() === 'openrouter' ? 'OpenRouter' : 'OpenAI'
+}
+
+function updateKeyUI() {
+  const key = getAPIKey()
+  keyBtn.classList.toggle('has-key', !!key)
+  keyBtn.classList.toggle('no-key', !key)
+  keyBtn.title = key ? `API key set (${detectProvider(key) || 'unknown'})` : 'Set API key'
+}
+
+function saveKey() {
+  const val = keyInput.value.trim()
+  if (val) {
+    localStorage.setItem('openai_api_key', val)
+    const provider = detectProvider(val)
+    keyStatus.textContent = provider ? `saved (${provider})` : 'unknown key format'
+    keyStatus.className = provider ? 'ok' : 'err'
+  } else {
+    localStorage.removeItem('openai_api_key')
+    keyStatus.textContent = 'cleared'
+    keyStatus.className = ''
+  }
+  updateKeyUI()
+  setTimeout(() => { keyStatus.textContent = ''; keyStatus.className = '' }, 2500)
 }
 
 let cachedSystemPrompt = null
@@ -90,6 +110,7 @@ function updateUI() {
     messageInput.disabled = true
     sendBtn.disabled = true
     opacitySlider.disabled = true
+    keyInput.disabled = true
   } else {
     lockBtn.textContent = '🔒'
     lockIcon.textContent = '🔒'
@@ -98,6 +119,7 @@ function updateUI() {
     messageInput.disabled = false
     sendBtn.disabled = false
     opacitySlider.disabled = false
+    keyInput.disabled = false
     messageInput.focus()
   }
 }
@@ -168,7 +190,7 @@ async function sendMessage() {
   try {
     const apiKey = getAPIKey()
     if (!apiKey) {
-      throw new Error(`${getProviderName()} API key not set. If the prompt didn't appear, restart the app and type your key when prompted.`)
+      throw new Error('No API key set. Click the 🔑 button above and paste your key.')
     }
 
     const systemPrompt = await getSystemPrompt()
@@ -192,7 +214,7 @@ async function sendMessage() {
       'Authorization': `Bearer ${apiKey}`
     }
 
-    if (window.__appConfig?.provider === 'openrouter') {
+    if (getActiveProvider() === 'openrouter') {
       headers['HTTP-Referer'] = 'https://github.com/vinay0094k/parda-app'
       headers['X-Title'] = 'Parda'
     }
@@ -307,6 +329,21 @@ hideBtn.addEventListener('click', () => {
   window.parda.hideWindow()
 })
 
+keyBtn.addEventListener('click', () => {
+  if (isClickThrough) return
+  keyPanel.classList.toggle('hidden')
+  if (!keyPanel.classList.contains('hidden')) {
+    keyInput.value = getAPIKey()
+    keyInput.focus()
+  }
+})
+
+keyInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') saveKey()
+})
+
+keyInput.addEventListener('blur', saveKey)
+
 // Drag handle for moving window (only in interactive mode)
 dragHandle.addEventListener('mousedown', (e) => {
   if (isClickThrough) return
@@ -345,6 +382,7 @@ window.parda.onClickThroughChanged((val) => {
   updateUI()
   if (val) {
     dragHandle.classList.remove('draggable', 'dragging')
+    keyPanel.classList.add('hidden')
   }
 })
 
@@ -390,17 +428,8 @@ async function loadAppConfig() {
   try {
     const config = await window.parda.getApiConfig()
     window.__appConfig = config
-
-    // Auto-seed localStorage from config file if not already set
-    const keyField = config.provider === 'openrouter' ? 'openrouter_api_key' : 'openai_api_key'
-    const configKey = config[keyField]
-    if (configKey && !isPlaceholder(configKey) && !localStorage.getItem('openai_api_key')) {
-      localStorage.setItem('openai_api_key', configKey)
-    }
-
     console.log('[Parda] Config loaded:', {
       provider: config.provider || 'openai',
-      hasApiKey: !!getAPIKey(),
       model: config.model,
       maxTokens: config.max_tokens
     })
@@ -410,23 +439,9 @@ async function loadAppConfig() {
   }
 }
 
-// Check API key on startup
-function checkAndSetupAPIKey() {
-  if (!getAPIKey()) {
-    const provider = getProviderName()
-    const userKey = prompt(`Enter your ${provider} API key:\n\n(This will be stored locally and used for API calls)\nSwitch provider in config/api-config.json`, '')
-    if (userKey && userKey.trim()) {
-      localStorage.setItem('openai_api_key', userKey.trim())
-      location.reload()
-    }
-  }
-}
-
 // Set initial UI state
 updateUI()
+updateKeyUI()
 
-// Load app config and check API key on load
-(async () => {
-  await loadAppConfig()
-  setTimeout(checkAndSetupAPIKey, 500)
-})()
+// Load app config on startup
+loadAppConfig()
