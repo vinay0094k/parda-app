@@ -1,8 +1,42 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const { execSync } = require('child_process')
 
 const DEF_OPACITY = 0.75
+
+// Capture protection via PowerShell P/Invoke (no native modules required)
+function enableCaptureProtection() {
+  if (process.platform !== 'win32') return
+  if (!win) return
+  try {
+    const buf = win.getNativeWindowHandle()
+    const hwnd = process.arch === 'x64'
+      ? buf.readBigUInt64LE(0).toString()
+      : buf.readUInt32LE(0).toString()
+
+    const script = [
+      'Add-Type -TypeDefinition @"',
+      'using System;',
+      'using System.Runtime.InteropServices;',
+      'public class PardaProtect {',
+      '    [DllImport("user32.dll")]',
+      '    public static extern bool SetWindowDisplayAffinity(IntPtr hwnd, uint dwAffinity);',
+      '}',
+      '"@',
+      '[PardaProtect]::SetWindowDisplayAffinity([IntPtr]::new(' + hwnd + '), 0x11)'
+    ].join('\n')
+
+    const tmpFile = path.join(app.getPath('temp'), `parda-protect-${Date.now()}.ps1`)
+    fs.writeFileSync(tmpFile, script, 'utf-8')
+    execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${tmpFile}"`, { timeout: 10000 })
+    fs.unlinkSync(tmpFile)
+    console.log('[parda] Capture protection applied via PowerShell (WDA_EXCLUDEFROMCAPTURE)')
+  } catch (e) {
+    console.error('[parda] PowerShell failed, falling back to Electron API:', e.message)
+    try { if (win) win.setContentProtection(true) } catch {}
+  }
+}
 
 // Detect Windows Server — use HW accel disable for compatibility
 function isWindowsServer() {
@@ -116,7 +150,7 @@ function createWindow() {
   win.once('ready-to-show', () => {
     win.showInactive()
     win.setIgnoreMouseEvents(true, { forward: true })
-    win.setContentProtection(true)
+    enableCaptureProtection()
     win.webContents.send('opacity-changed', config.opacity ?? DEF_OPACITY)
   })
 
