@@ -26,7 +26,13 @@ let dragStartWinX = 0
 let dragStartWinY = 0
 
 // OpenAI API configuration
-const getAPIKey = () => localStorage.getItem('openai_api_key') || ''
+const getAPIKey = () => {
+  // Check localStorage first (user-configured)
+  const stored = localStorage.getItem('openai_api_key')
+  if (stored) return stored
+  // Fall back to config file (pre-configured for build)
+  return window.__appConfig?.openai_api_key || ''
+}
 
 let cachedSystemPrompt = null
 
@@ -151,21 +157,27 @@ async function sendMessage() {
 
     const systemPrompt = await getSystemPrompt()
 
+    const payload = {
+      model: window.__appConfig?.model || 'gpt-5-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: text }
+      ],
+      max_tokens: window.__appConfig?.max_tokens || 150
+    }
+
+    // Only add temperature if specified in config (not all models support it)
+    if (window.__appConfig?.temperature !== undefined) {
+      payload.temperature = window.__appConfig.temperature
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model: 'gpt-5-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text }
-        ],
-        max_tokens: 150,
-        temperature: 0.7
-      })
+      body: JSON.stringify(payload)
     })
 
     if (!response.ok) {
@@ -348,6 +360,17 @@ document.addEventListener('mouseup', () => {
   resizing = false
 })
 
+// Load config from build
+async function loadAppConfig() {
+  try {
+    const config = await window.parda.getApiConfig()
+    window.__appConfig = config
+  } catch (e) {
+    console.error('Failed to load app config:', e)
+    window.__appConfig = {}
+  }
+}
+
 // Check API key on startup
 function checkAndSetupAPIKey() {
   if (!getAPIKey()) {
@@ -363,9 +386,12 @@ function checkAndSetupAPIKey() {
 updateUI()
 updateShieldUI()
 
-// Check API key on load (defer to avoid timing issues)
-setTimeout(() => {
-  if (!isClickThrough) {
-    checkAndSetupAPIKey()
-  }
-}, 500)
+// Load app config and check API key on load
+(async () => {
+  await loadAppConfig()
+  setTimeout(() => {
+    if (!isClickThrough) {
+      checkAndSetupAPIKey()
+    }
+  }, 500)
+})()

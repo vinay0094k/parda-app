@@ -244,3 +244,15 @@ ipcMain.handle('get-system-prompt', () => {
   }
   return 'You are a helpful DevOps and cloud engineering interview coach. Provide practical, production-focused answers with real-world scenarios and technical depth.'
 })
+
+ipcMain.handle('get-api-config', () => {
+  try {
+    const configPath = path.join(__dirname, 'config', 'api-config.json')
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    }
+  } catch (e) {
+    console.error('[parda] Failed to load API config:', e.message)
+  }
+  return { openai_api_key: null }
+})

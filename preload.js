@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('parda', {
   },
   resizeWindow: (w, h) => ipcRenderer.invoke('resize-window', w, h),
   moveWindow: (x, y) => ipcRenderer.invoke('move-window', x, y),
-  getSystemPrompt: () => ipcRenderer.invoke('get-system-prompt')
+  getSystemPrompt: () => ipcRenderer.invoke('get-system-prompt'),
+  getApiConfig: () => ipcRenderer.invoke('get-api-config')
 })
