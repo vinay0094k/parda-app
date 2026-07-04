@@ -183,6 +183,12 @@ ipcMain.handle('resize-window', (_, w, h) => {
   }
 })
 
+ipcMain.handle('move-window', (_, x, y) => {
+  if (win) {
+    win.setPosition(x, y)
+  }
+})
+
 function registerHotkeys() {
   globalShortcut.register('CommandOrControl+Shift+P', toggleVisibility)
   globalShortcut.register('CommandOrControl+Shift+I', toggleClickThrough)
@@ -226,3 +232,15 @@ ipcMain.handle('toggle-capture-protection', () => {
   return enabled
 })
 ipcMain.handle('get-capture-protection', () => captureProtectionEnabled)
+
+ipcMain.handle('get-system-prompt', () => {
+  try {
+    const promptPath = path.join(__dirname, 'prompts', 'system-prompt.md')
+    if (fs.existsSync(promptPath)) {
+      return fs.readFileSync(promptPath, 'utf-8')
+    }
+  } catch (e) {
+    console.error('[parda] Failed to load system prompt:', e.message)
+  }
+  return 'You are a helpful DevOps and cloud engineering interview coach. Provide practical, production-focused answers with real-world scenarios and technical depth.'
+})

@@ -12,12 +12,38 @@ const responseText = document.getElementById('response-text')
 const responseAvatar = document.getElementById('response-avatar')
 const waveformCanvas = document.getElementById('waveform-canvas')
 const ctx = waveformCanvas.getContext('2d')
+const dragHandle = document.getElementById('drag-handle')
 
 let isClickThrough = true
 let isCaptureProtected = true
 let isListening = false
 let animationFrameId = null
 let waveformPhase = 0
+let dragging = false
+let dragStartX = 0
+let dragStartY = 0
+let dragStartWinX = 0
+let dragStartWinY = 0
+
+// OpenAI API configuration
+const getAPIKey = () => localStorage.getItem('openai_api_key') || ''
+
+let cachedSystemPrompt = null
+
+const getSystemPrompt = async () => {
+  if (cachedSystemPrompt) return cachedSystemPrompt
+  try {
+    cachedSystemPrompt = await window.parda.getSystemPrompt()
+    return cachedSystemPrompt
+  } catch (e) {
+    console.error('Failed to load system prompt:', e)
+    return 'You are a helpful DevOps interview coach providing practical, production-focused answers.'
+  }
+}
+
+// Speech Recognition
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+const speechSynthesis = window.speechSynthesis
 
 window.parda.getClickThrough().then((val) => {
   isClickThrough = val
@@ -104,7 +130,7 @@ function setListening(state) {
   }
 }
 
-function sendMessage() {
+async function sendMessage() {
   const text = messageInput.value.trim()
   if (!text) return
 
@@ -116,22 +142,116 @@ function sendMessage() {
   messageInput.focus()
 
   setListening(true)
-  setTimeout(() => {
-    const responses = [
-      'Got it. Let me process that.',
-      'That\'s helpful information.',
-      'I\'m analyzing your request.',
-      'Processing complete.',
-      'Ready for more.'
-    ]
-    const response = responses[Math.floor(Math.random() * responses.length)]
-    responseText.textContent = response
+
+  try {
+    const apiKey = getAPIKey()
+    if (!apiKey) {
+      throw new Error('OpenAI API key not set. Please set your API key when prompted.')
+    }
+
+    const systemPrompt = await getSystemPrompt()
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text }
+        ],
+        max_tokens: 150,
+        temperature: 0.7
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`)
+    }
+
+    const data = await response.json()
+    const aiResponse = data.choices[0].message.content
+
+    responseText.textContent = aiResponse
     responseAvatar.textContent = '🤖'
+
+    // Speak the response
+    speakText(aiResponse)
+  } catch (error) {
+    console.error('Error:', error)
+    responseText.textContent = `Error: ${error.message}`
+    responseAvatar.textContent = '⚠️'
+  } finally {
     setListening(false)
-  }, 2000)
+  }
 }
 
-sendBtn.addEventListener('click', sendMessage)
+function speakText(text) {
+  if (!speechSynthesis) return
+
+  speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.rate = 1.0
+  utterance.pitch = 1.0
+  utterance.volume = 1.0
+  speechSynthesis.speak(utterance)
+}
+
+function startVoiceInput() {
+  if (!SpeechRecognition) {
+    alert('Speech Recognition not supported in your browser')
+    return
+  }
+
+  const recognition = new SpeechRecognition()
+  recognition.continuous = false
+  recognition.interimResults = true
+  recognition.lang = 'en-US'
+
+  recognition.onstart = () => {
+    setListening(true)
+    messageInput.value = ''
+  }
+
+  recognition.onresult = (event) => {
+    let interimTranscript = ''
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i].transcript
+      if (event.results[i].isFinal) {
+        messageInput.value = transcript
+      } else {
+        interimTranscript += transcript
+      }
+    }
+  }
+
+  recognition.onend = () => {
+    setListening(false)
+    if (messageInput.value.trim()) {
+      sendMessage()
+    }
+  }
+
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error)
+    setListening(false)
+  }
+
+  recognition.start()
+}
+
+sendBtn.addEventListener('click', () => {
+  if (messageInput.value.trim()) {
+    sendMessage()
+  } else {
+    startVoiceInput()
+  }
+})
+
 messageInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
     sendMessage()
@@ -150,9 +270,45 @@ hideBtn.addEventListener('click', () => {
   window.parda.hideWindow()
 })
 
+// Drag handle for moving window (only in interactive mode)
+dragHandle.addEventListener('mousedown', (e) => {
+  if (isClickThrough) return
+  dragging = true
+  dragStartX = e.screenX
+  dragStartY = e.screenY
+  dragStartWinX = window.screenX
+  dragStartWinY = window.screenY
+  dragHandle.classList.add('dragging')
+  e.preventDefault()
+})
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragging) {
+    if (!isClickThrough) {
+      dragHandle.classList.add('draggable')
+    } else {
+      dragHandle.classList.remove('draggable')
+    }
+    return
+  }
+  const dx = e.screenX - dragStartX
+  const dy = e.screenY - dragStartY
+  window.parda.moveWindow(dragStartWinX + dx, dragStartWinY + dy)
+})
+
+document.addEventListener('mouseup', () => {
+  if (dragging) {
+    dragging = false
+    dragHandle.classList.remove('dragging')
+  }
+})
+
 window.parda.onClickThroughChanged((val) => {
   isClickThrough = val
   updateUI()
+  if (val) {
+    dragHandle.classList.remove('draggable', 'dragging')
+  }
 })
 
 window.parda.onCaptureProtectionChanged((val) => {
@@ -192,6 +348,24 @@ document.addEventListener('mouseup', () => {
   resizing = false
 })
 
+// Check API key on startup
+function checkAndSetupAPIKey() {
+  if (!getAPIKey()) {
+    const userKey = prompt('Enter your OpenAI API key:\n\n(This will be stored locally and used for API calls)', '')
+    if (userKey && userKey.trim()) {
+      localStorage.setItem('openai_api_key', userKey.trim())
+      location.reload()
+    }
+  }
+}
+
 // Set initial UI state
 updateUI()
 updateShieldUI()
+
+// Check API key on load (defer to avoid timing issues)
+setTimeout(() => {
+  if (!isClickThrough) {
+    checkAndSetupAPIKey()
+  }
+}, 500)

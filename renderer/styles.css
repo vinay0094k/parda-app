@@ -63,6 +63,28 @@ html, body {
   flex-shrink: 0;
 }
 
+#drag-handle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  cursor: default;
+  user-select: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+#drag-handle.draggable {
+  cursor: grab;
+  background: rgba(100, 180, 255, 0.05);
+}
+
+#drag-handle.dragging {
+  cursor: grabbing;
+  background: rgba(100, 180, 255, 0.1);
+}
+
 #status-row {
   display: flex;
   align-items: center;

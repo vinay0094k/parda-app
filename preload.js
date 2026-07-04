@@ -17,5 +17,7 @@ contextBridge.exposeInMainWorld('parda', {
   onCaptureProtectionChanged: (cb) => {
     ipcRenderer.on('capture-protection-changed', (_, val) => cb(val))
   },
-  resizeWindow: (w, h) => ipcRenderer.invoke('resize-window', w, h)
+  resizeWindow: (w, h) => ipcRenderer.invoke('resize-window', w, h),
+  moveWindow: (x, y) => ipcRenderer.invoke('move-window', x, y),
+  getSystemPrompt: () => ipcRenderer.invoke('get-system-prompt')
 })
