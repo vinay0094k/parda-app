@@ -119,21 +119,30 @@ function toggleVisibility() {
   }
 }
 
+const MIN_W = 240
+const MIN_H = 160
+const DEF_W = 380
+const DEF_H = 280
+
 function createWindow() {
   const config = getConfig()
   const primDisplay = screen.getPrimaryDisplay()
   const { width: sw, height: sh } = primDisplay.workAreaSize
+  const w = Math.max(MIN_W, config.w ?? DEF_W)
+  const h = Math.max(MIN_H, config.h ?? DEF_H)
 
   win = new BrowserWindow({
-    width: 380,
-    height: 280,
-    x: config.x ?? sw - 400,
+    width: w,
+    height: h,
+    x: config.x ?? sw - w - 20,
     y: config.y ?? 80,
+    minWidth: MIN_W,
+    minHeight: MIN_H,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
+    resizable: true,
     hasShadow: false,
     show: false,
     webPreferences: {
@@ -151,19 +160,28 @@ function createWindow() {
     applyCaptureProtection(win.getNativeWindowHandle())
   })
 
+  const saveWinBounds = () => {
+    const [x, y] = win.getPosition()
+    const [w, h] = win.getSize()
+    saveConfig({ x, y, w, h })
+  }
+
   win.on('close', (e) => {
     if (app.isQuitting) return
     e.preventDefault()
-    const [x, y] = win.getPosition()
-    saveConfig({ x, y })
+    saveWinBounds()
     win.hide()
   })
 
-  win.on('move', () => {
-    const [x, y] = win.getPosition()
-    saveConfig({ x, y })
-  })
+  win.on('resize', saveWinBounds)
+  win.on('move', saveWinBounds)
 }
+
+ipcMain.handle('resize-window', (_, w, h) => {
+  if (win) {
+    win.setSize(Math.max(MIN_W, w), Math.max(MIN_H, h))
+  }
+})
 
 function registerHotkeys() {
   globalShortcut.register('CommandOrControl+Shift+P', toggleVisibility)

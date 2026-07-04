@@ -88,3 +88,29 @@ document.addEventListener('keydown', (e) => {
     window.parda.toggleClickThrough()
   }
 })
+
+// Custom resize handle
+const resizeHandle = document.getElementById('resize-handle')
+let resizing = false
+let startX, startY, startW, startH
+
+resizeHandle.addEventListener('mousedown', (e) => {
+  if (isClickThrough) return
+  resizing = true
+  startX = e.screenX
+  startY = e.screenY
+  startW = window.innerWidth
+  startH = window.innerHeight
+  e.preventDefault()
+})
+
+document.addEventListener('mousemove', (e) => {
+  if (!resizing) return
+  const dw = e.screenX - startX
+  const dh = e.screenY - startY
+  window.parda.resizeWindow(Math.max(240, startW + dw), Math.max(160, startH + dh))
+})
+
+document.addEventListener('mouseup', () => {
+  resizing = false
+})
