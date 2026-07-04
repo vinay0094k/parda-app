@@ -1,5 +1,7 @@
 {
-  "openai_api_key": "sk-proj-PASTE-YOUR-ACTUAL-KEY-HERE",
+  "openai_api_key": "",
+  "openrouter_api_key": "",
+  "provider": "openai",
   "model": "gpt-5-mini",
   "max_tokens": 150,
   "system_prompt_path": "prompts/system-prompt.md"

@@ -25,17 +25,27 @@ let dragStartY = 0
 let dragStartWinX = 0
 let dragStartWinY = 0
 
-// OpenAI API configuration
+// OpenAI / OpenRouter API configuration
 const getAPIKey = () => {
   const stored = localStorage.getItem('openai_api_key')
-  if (stored && !stored.startsWith('sk-proj-PASTE-YOUR')) {
-    return stored
+  if (stored) return stored
+  const provider = window.__appConfig?.provider || 'openai'
+  const keyField = provider === 'openrouter' ? 'openrouter_api_key' : 'openai_api_key'
+  const configKey = window.__appConfig?.[keyField] || ''
+  return configKey
+}
+
+const getAPIBase = () => {
+  const provider = window.__appConfig?.provider || 'openai'
+  if (provider === 'openrouter') {
+    return 'https://openrouter.ai/api/v1/chat/completions'
   }
-  const configKey = window.__appConfig?.openai_api_key || ''
-  if (configKey && !configKey.startsWith('sk-proj-PASTE-YOUR')) {
-    return configKey
-  }
-  return ''
+  return 'https://api.openai.com/v1/chat/completions'
+}
+
+const getProviderName = () => {
+  const p = window.__appConfig?.provider || 'openai'
+  return p === 'openrouter' ? 'OpenRouter' : 'OpenAI'
 }
 
 let cachedSystemPrompt = null
@@ -156,7 +166,7 @@ async function sendMessage() {
   try {
     const apiKey = getAPIKey()
     if (!apiKey) {
-      throw new Error('OpenAI API key not set. Please set your API key when prompted.')
+      throw new Error(`${getProviderName()} API key not set. Please set your API key when prompted.`)
     }
 
     const systemPrompt = await getSystemPrompt()
@@ -175,18 +185,25 @@ async function sendMessage() {
       payload.temperature = window.__appConfig.temperature
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    }
+
+    if (window.__appConfig?.provider === 'openrouter') {
+      headers['HTTP-Referer'] = 'https://github.com/vinay0094k/parda-app'
+      headers['X-Title'] = 'Parda'
+    }
+
+    const response = await fetch(getAPIBase(), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers,
       body: JSON.stringify(payload)
     })
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`)
+      throw new Error(`${getProviderName()} API error: ${error.error?.message || response.statusText}`)
     }
 
     const data = await response.json()
@@ -370,7 +387,8 @@ async function loadAppConfig() {
     const config = await window.parda.getApiConfig()
     window.__appConfig = config
     console.log('[Parda] Config loaded:', {
-      hasApiKey: !!config.openai_api_key,
+      provider: config.provider || 'openai',
+      hasApiKey: !!getAPIKey(),
       model: config.model,
       maxTokens: config.max_tokens
     })
@@ -383,7 +401,8 @@ async function loadAppConfig() {
 // Check API key on startup
 function checkAndSetupAPIKey() {
   if (!getAPIKey()) {
-    const userKey = prompt('Enter your OpenAI API key:\n\n(This will be stored locally and used for API calls)', '')
+    const provider = getProviderName()
+    const userKey = prompt(`Enter your ${provider} API key:\n\n(This will be stored locally and used for API calls)\nSwitch provider in config/api-config.json`, '')
     if (userKey && userKey.trim()) {
       localStorage.setItem('openai_api_key', userKey.trim())
       location.reload()
