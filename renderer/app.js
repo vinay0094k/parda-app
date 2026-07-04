@@ -27,20 +27,15 @@ let dragStartWinY = 0
 
 // OpenAI API configuration
 const getAPIKey = () => {
-  // Check localStorage first (user-configured)
   const stored = localStorage.getItem('openai_api_key')
-  if (stored) {
-    console.log('[Parda] Using API key from localStorage')
+  if (stored && !stored.startsWith('sk-proj-PASTE-YOUR')) {
     return stored
   }
-  // Fall back to config file (pre-configured for build)
   const configKey = window.__appConfig?.openai_api_key || ''
-  if (configKey) {
-    console.log('[Parda] Using API key from config file')
-  } else {
-    console.log('[Parda] No API key found in localStorage or config')
+  if (configKey && !configKey.startsWith('sk-proj-PASTE-YOUR')) {
+    return configKey
   }
-  return configKey
+  return ''
 }
 
 let cachedSystemPrompt = null
@@ -403,9 +398,5 @@ updateShieldUI()
 // Load app config and check API key on load
 (async () => {
   await loadAppConfig()
-  setTimeout(() => {
-    if (!isClickThrough) {
-      checkAndSetupAPIKey()
-    }
-  }, 500)
+  setTimeout(checkAndSetupAPIKey, 500)
 })()
