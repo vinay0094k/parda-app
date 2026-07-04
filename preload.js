@@ -20,5 +20,10 @@ contextBridge.exposeInMainWorld('parda', {
   resizeWindow: (w, h) => ipcRenderer.invoke('resize-window', w, h),
   moveWindow: (x, y) => ipcRenderer.invoke('move-window', x, y),
   getSystemPrompt: () => ipcRenderer.invoke('get-system-prompt'),
-  getApiConfig: () => ipcRenderer.invoke('get-api-config')
+  getApiConfig: () => ipcRenderer.invoke('get-api-config'),
+  getOpacity: () => ipcRenderer.invoke('get-opacity'),
+  setOpacity: (val) => ipcRenderer.invoke('set-opacity', val),
+  onOpacityChanged: (cb) => {
+    ipcRenderer.on('opacity-changed', (_, val) => cb(val))
+  }
 })

@@ -3,6 +3,8 @@ const path = require('path')
 const fs = require('fs')
 const os = require('os')
 
+const DEF_OPACITY = 0.75
+
 // Capture protection via Win32 SetWindowDisplayAffinity
 const CAPTURE_API = initCaptureProtection()
 const WDA_EXCLUDEFROMCAPTURE = 0x00000011
@@ -158,6 +160,7 @@ function createWindow() {
     win.showInactive()
     win.setIgnoreMouseEvents(true, { forward: true })
     applyCaptureProtection(win.getNativeWindowHandle())
+    win.webContents.send('opacity-changed', config.opacity ?? DEF_OPACITY)
   })
 
   const saveWinBounds = () => {
@@ -255,4 +258,17 @@ ipcMain.handle('get-api-config', () => {
     console.error('[parda] Failed to load API config:', e.message)
   }
   return { openai_api_key: null }
+})
+
+ipcMain.handle('get-opacity', () => {
+  return getConfig().opacity ?? DEF_OPACITY
+})
+
+ipcMain.handle('set-opacity', (_, val) => {
+  const config = getConfig()
+  config.opacity = val
+  saveConfig(config)
+  if (win) {
+    win.webContents.send('opacity-changed', val)
+  }
 })

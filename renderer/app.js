@@ -13,6 +13,7 @@ const responseAvatar = document.getElementById('response-avatar')
 const waveformCanvas = document.getElementById('waveform-canvas')
 const ctx = waveformCanvas.getContext('2d')
 const dragHandle = document.getElementById('drag-handle')
+const opacitySlider = document.getElementById('opacity-slider')
 
 let isClickThrough = true
 let isCaptureProtected = true
@@ -75,6 +76,11 @@ window.parda.getCaptureProtection().then((val) => {
   updateShieldUI()
 })
 
+window.parda.getOpacity().then((val) => {
+  document.documentElement.style.setProperty('--card-opacity', val)
+  opacitySlider.value = val
+})
+
 function updateUI() {
   if (isClickThrough) {
     lockBtn.textContent = '🔓'
@@ -83,6 +89,7 @@ function updateUI() {
     document.body.classList.remove('interactive')
     messageInput.disabled = true
     sendBtn.disabled = true
+    opacitySlider.disabled = true
   } else {
     lockBtn.textContent = '🔒'
     lockIcon.textContent = '🔒'
@@ -90,6 +97,7 @@ function updateUI() {
     document.body.classList.add('interactive')
     messageInput.disabled = false
     sendBtn.disabled = false
+    opacitySlider.disabled = false
     messageInput.focus()
   }
 }
@@ -299,6 +307,12 @@ shieldBtn.addEventListener('click', () => {
   window.parda.toggleCaptureProtection()
 })
 
+opacitySlider.addEventListener('input', (e) => {
+  const val = parseFloat(e.target.value)
+  document.documentElement.style.setProperty('--card-opacity', val)
+  window.parda.setOpacity(val)
+})
+
 hideBtn.addEventListener('click', () => {
   window.parda.hideWindow()
 })
@@ -347,6 +361,11 @@ window.parda.onClickThroughChanged((val) => {
 window.parda.onCaptureProtectionChanged((val) => {
   isCaptureProtected = val
   updateShieldUI()
+})
+
+window.parda.onOpacityChanged((val) => {
+  document.documentElement.style.setProperty('--card-opacity', val)
+  opacitySlider.value = val
 })
 
 document.addEventListener('keydown', (e) => {
