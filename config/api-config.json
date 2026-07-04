@@ -1,6 +1,6 @@
 {
-  "openai_api_key": "",
-  "openrouter_api_key": "",
+  "openai_api_key": "sk-proj-YOUR-OPENAI-KEY-HERE",
+  "openrouter_api_key": "sk-or-v1-YOUR-OPENROUTER-KEY-HERE",
   "provider": "openai",
   "model": "gpt-5-mini",
   "max_tokens": 150,

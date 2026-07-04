@@ -25,13 +25,20 @@ let dragStartWinX = 0
 let dragStartWinY = 0
 
 // OpenAI / OpenRouter API configuration
+const PLACEHOLDER_PREFIXES = ['sk-proj-PASTE', 'sk-proj-YOUR']
+
+const isPlaceholder = (key) => {
+  return PLACEHOLDER_PREFIXES.some(p => key.startsWith(p))
+}
+
 const getAPIKey = () => {
   const stored = localStorage.getItem('openai_api_key')
-  if (stored) return stored
+  if (stored && !isPlaceholder(stored)) return stored
   const provider = window.__appConfig?.provider || 'openai'
   const keyField = provider === 'openrouter' ? 'openrouter_api_key' : 'openai_api_key'
   const configKey = window.__appConfig?.[keyField] || ''
-  return configKey
+  if (configKey && !isPlaceholder(configKey)) return configKey
+  return ''
 }
 
 const getAPIBase = () => {
@@ -161,7 +168,7 @@ async function sendMessage() {
   try {
     const apiKey = getAPIKey()
     if (!apiKey) {
-      throw new Error(`${getProviderName()} API key not set. Please set your API key when prompted.`)
+      throw new Error(`${getProviderName()} API key not set. If the prompt didn't appear, restart the app and type your key when prompted.`)
     }
 
     const systemPrompt = await getSystemPrompt()
@@ -383,6 +390,14 @@ async function loadAppConfig() {
   try {
     const config = await window.parda.getApiConfig()
     window.__appConfig = config
+
+    // Auto-seed localStorage from config file if not already set
+    const keyField = config.provider === 'openrouter' ? 'openrouter_api_key' : 'openai_api_key'
+    const configKey = config[keyField]
+    if (configKey && !isPlaceholder(configKey) && !localStorage.getItem('openai_api_key')) {
+      localStorage.setItem('openai_api_key', configKey)
+    }
+
     console.log('[Parda] Config loaded:', {
       provider: config.provider || 'openai',
       hasApiKey: !!getAPIKey(),

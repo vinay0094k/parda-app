@@ -214,20 +214,26 @@ ipcMain.handle('toggle-click-through', () => toggleClickThrough())
 ipcMain.handle('hide-window', () => {
   win.hide()
 })
-const RESOURCES_DIR = process.resourcesPath || __dirname
 
-function readResourceFile(relativePath) {
-  // Try production path (outside asar) first, then dev path (inside project)
-  const paths = [
-    path.join(RESOURCES_DIR, relativePath),
-    path.join(__dirname, relativePath)
+function findResource(relativePath) {
+  const candidates = [
+    process.resourcesPath,
+    path.dirname(app.getPath('exe')),
+    __dirname
   ]
-  for (const p of paths) {
+  for (const base of candidates) {
+    if (!base) continue
     try {
-      if (fs.existsSync(p)) return fs.readFileSync(p, 'utf-8')
+      const p = path.join(base, relativePath)
+      if (fs.existsSync(p)) return p
     } catch {}
   }
   return null
+}
+
+function readResourceFile(relativePath) {
+  const p = findResource(relativePath)
+  return p ? fs.readFileSync(p, 'utf-8') : null
 }
 
 function readResourceJSON(relativePath) {
