@@ -33,6 +33,18 @@
       "runAfterFinish": false
     }
   },
+  "extraResources": [
+    {
+      "from": "config",
+      "to": "config",
+      "filter": ["*.json"]
+    },
+    {
+      "from": "prompts",
+      "to": "prompts",
+      "filter": ["*.md"]
+    }
+  ],
   "dependencies": {
     "koffi": "^3.1.0",
     "openai": "^6.45.0"

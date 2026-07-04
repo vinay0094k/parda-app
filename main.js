@@ -1,7 +1,6 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron')
 const path = require('path')
 const fs = require('fs')
-const os = require('os')
 
 const DEF_OPACITY = 0.75
 
@@ -215,27 +214,36 @@ ipcMain.handle('toggle-click-through', () => toggleClickThrough())
 ipcMain.handle('hide-window', () => {
   win.hide()
 })
-ipcMain.handle('get-system-prompt', () => {
-  try {
-    const promptPath = path.join(__dirname, 'prompts', 'system-prompt.md')
-    if (fs.existsSync(promptPath)) {
-      return fs.readFileSync(promptPath, 'utf-8')
-    }
-  } catch (e) {
-    console.error('[parda] Failed to load system prompt:', e.message)
+const RESOURCES_DIR = process.resourcesPath || __dirname
+
+function readResourceFile(relativePath) {
+  // Try production path (outside asar) first, then dev path (inside project)
+  const paths = [
+    path.join(RESOURCES_DIR, relativePath),
+    path.join(__dirname, relativePath)
+  ]
+  for (const p of paths) {
+    try {
+      if (fs.existsSync(p)) return fs.readFileSync(p, 'utf-8')
+    } catch {}
   }
+  return null
+}
+
+function readResourceJSON(relativePath) {
+  const content = readResourceFile(relativePath)
+  return content ? JSON.parse(content) : null
+}
+
+ipcMain.handle('get-system-prompt', () => {
+  const content = readResourceFile(path.join('prompts', 'system-prompt.md'))
+  if (content) return content
   return 'You are a helpful DevOps and cloud engineering interview coach. Provide practical, production-focused answers with real-world scenarios and technical depth.'
 })
 
 ipcMain.handle('get-api-config', () => {
-  try {
-    const configPath = path.join(__dirname, 'config', 'api-config.json')
-    if (fs.existsSync(configPath)) {
-      return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-    }
-  } catch (e) {
-    console.error('[parda] Failed to load API config:', e.message)
-  }
+  const config = readResourceJSON(path.join('config', 'api-config.json'))
+  if (config) return config
   return { openai_api_key: null }
 })
 
