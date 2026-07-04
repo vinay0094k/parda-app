@@ -29,9 +29,18 @@ let dragStartWinY = 0
 const getAPIKey = () => {
   // Check localStorage first (user-configured)
   const stored = localStorage.getItem('openai_api_key')
-  if (stored) return stored
+  if (stored) {
+    console.log('[Parda] Using API key from localStorage')
+    return stored
+  }
   // Fall back to config file (pre-configured for build)
-  return window.__appConfig?.openai_api_key || ''
+  const configKey = window.__appConfig?.openai_api_key || ''
+  if (configKey) {
+    console.log('[Parda] Using API key from config file')
+  } else {
+    console.log('[Parda] No API key found in localStorage or config')
+  }
+  return configKey
 }
 
 let cachedSystemPrompt = null
@@ -365,8 +374,13 @@ async function loadAppConfig() {
   try {
     const config = await window.parda.getApiConfig()
     window.__appConfig = config
+    console.log('[Parda] Config loaded:', {
+      hasApiKey: !!config.openai_api_key,
+      model: config.model,
+      maxTokens: config.max_tokens
+    })
   } catch (e) {
-    console.error('Failed to load app config:', e)
+    console.error('[Parda] Failed to load app config:', e)
     window.__appConfig = {}
   }
 }

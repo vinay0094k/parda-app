@@ -1,5 +1,5 @@
 {
-  "openai_api_key": "sk-proj-YOUR-ACTUAL-API-KEY-HERE",
+  "openai_api_key": "sk-proj-PASTE-YOUR-ACTUAL-KEY-HERE",
   "model": "gpt-5-mini",
   "max_tokens": 150,
   "system_prompt_path": "prompts/system-prompt.md"
