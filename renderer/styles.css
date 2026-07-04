@@ -350,18 +350,6 @@ body.interactive #card {
   border-color: rgba(100, 180, 255, 0.2);
 }
 
-#btn-shield {
-  font-size: 12px;
-}
-
-#btn-shield.protected {
-  color: rgba(100, 255, 130, 0.7);
-}
-
-#btn-shield.unprotected {
-  color: rgba(255, 100, 100, 0.5);
-}
-
 #opacity-control {
   display: flex;
   align-items: center;

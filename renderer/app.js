@@ -2,7 +2,6 @@ const messageInput = document.getElementById('message-input')
 const sendBtn = document.getElementById('send-btn')
 const lockBtn = document.getElementById('btn-lock')
 const hideBtn = document.getElementById('btn-hide')
-const shieldBtn = document.getElementById('btn-shield')
 const lockIcon = document.getElementById('lock-icon')
 const lockLabel = document.getElementById('lock-label')
 const savedIndicator = document.getElementById('saved-indicator')
@@ -16,7 +15,6 @@ const dragHandle = document.getElementById('drag-handle')
 const opacitySlider = document.getElementById('opacity-slider')
 
 let isClickThrough = true
-let isCaptureProtected = true
 let isListening = false
 let animationFrameId = null
 let waveformPhase = 0
@@ -71,11 +69,6 @@ window.parda.getClickThrough().then((val) => {
   updateUI()
 })
 
-window.parda.getCaptureProtection().then((val) => {
-  isCaptureProtected = val
-  updateShieldUI()
-})
-
 window.parda.getOpacity().then((val) => {
   document.documentElement.style.setProperty('--card-opacity', val)
   opacitySlider.value = val
@@ -100,12 +93,6 @@ function updateUI() {
     opacitySlider.disabled = false
     messageInput.focus()
   }
-}
-
-function updateShieldUI() {
-  shieldBtn.classList.toggle('protected', isCaptureProtected)
-  shieldBtn.classList.toggle('unprotected', !isCaptureProtected)
-  shieldBtn.title = (isCaptureProtected ? 'Protected' : 'Unprotected') + ' from screen capture (Ctrl+Shift+H)'
 }
 
 function drawWaveform() {
@@ -303,10 +290,6 @@ lockBtn.addEventListener('click', () => {
   window.parda.toggleClickThrough()
 })
 
-shieldBtn.addEventListener('click', () => {
-  window.parda.toggleCaptureProtection()
-})
-
 opacitySlider.addEventListener('input', (e) => {
   const val = parseFloat(e.target.value)
   document.documentElement.style.setProperty('--card-opacity', val)
@@ -356,11 +339,6 @@ window.parda.onClickThroughChanged((val) => {
   if (val) {
     dragHandle.classList.remove('draggable', 'dragging')
   }
-})
-
-window.parda.onCaptureProtectionChanged((val) => {
-  isCaptureProtected = val
-  updateShieldUI()
 })
 
 window.parda.onOpacityChanged((val) => {
@@ -431,7 +409,6 @@ function checkAndSetupAPIKey() {
 
 // Set initial UI state
 updateUI()
-updateShieldUI()
 
 // Load app config and check API key on load
 (async () => {

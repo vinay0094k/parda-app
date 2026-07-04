@@ -5,11 +5,9 @@ const os = require('os')
 
 const DEF_OPACITY = 0.75
 
-// Capture protection via Win32 SetWindowDisplayAffinity
+// Capture protection via Win32 SetWindowDisplayAffinity (always on)
 const CAPTURE_API = initCaptureProtection()
 const WDA_EXCLUDEFROMCAPTURE = 0x00000011
-const WDA_NONE = 0
-let captureProtectionEnabled = true
 
 function initCaptureProtection() {
   if (process.platform !== 'win32') return null
@@ -31,20 +29,11 @@ function getHwndPtr(buf) {
 function applyCaptureProtection(hwndBuf) {
   if (!CAPTURE_API) return false
   try {
-    const dwAffinity = captureProtectionEnabled ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE
-    return CAPTURE_API.func(getHwndPtr(hwndBuf), dwAffinity)
+    return CAPTURE_API.func(getHwndPtr(hwndBuf), WDA_EXCLUDEFROMCAPTURE)
   } catch (e) {
     console.error('[parda] applyCaptureProtection failed:', e.message)
     return false
   }
-}
-
-function toggleCaptureProtection() {
-  captureProtectionEnabled = !captureProtectionEnabled
-  if (win) {
-    applyCaptureProtection(win.getNativeWindowHandle())
-  }
-  return captureProtectionEnabled
 }
 
 // Detect Windows Server — use HW accel disable for compatibility
@@ -199,10 +188,6 @@ function registerHotkeys() {
     app.isQuitting = true
     app.quit()
   })
-  globalShortcut.register('CommandOrControl+Shift+H', () => {
-    const enabled = toggleCaptureProtection()
-    if (win) win.webContents.send('capture-protection-changed', enabled)
-  })
 }
 
 app.whenReady().then(() => {
@@ -230,12 +215,6 @@ ipcMain.handle('toggle-click-through', () => toggleClickThrough())
 ipcMain.handle('hide-window', () => {
   win.hide()
 })
-ipcMain.handle('toggle-capture-protection', () => {
-  const enabled = toggleCaptureProtection()
-  return enabled
-})
-ipcMain.handle('get-capture-protection', () => captureProtectionEnabled)
-
 ipcMain.handle('get-system-prompt', () => {
   try {
     const promptPath = path.join(__dirname, 'prompts', 'system-prompt.md')
