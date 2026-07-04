@@ -4,37 +4,6 @@ const fs = require('fs')
 
 const DEF_OPACITY = 0.75
 
-// Capture protection via Win32 SetWindowDisplayAffinity (always on)
-const CAPTURE_API = initCaptureProtection()
-const WDA_EXCLUDEFROMCAPTURE = 0x00000011
-
-function initCaptureProtection() {
-  if (process.platform !== 'win32') return null
-  try {
-    const koffi = require('koffi')
-    const lib = koffi.load('user32.dll')
-    const func = lib.func('SetWindowDisplayAffinity', 'bool', ['intptr', 'uint32'])
-    return { lib, func }
-  } catch (e) {
-    console.error('[parda] Capture protection init failed:', e.message)
-    return null
-  }
-}
-
-function getHwndPtr(buf) {
-  return process.arch === 'x64' ? Number(buf.readBigUInt64LE(0)) : buf.readUInt32LE(0)
-}
-
-function applyCaptureProtection(hwndBuf) {
-  if (!CAPTURE_API) return false
-  try {
-    return CAPTURE_API.func(getHwndPtr(hwndBuf), WDA_EXCLUDEFROMCAPTURE)
-  } catch (e) {
-    console.error('[parda] applyCaptureProtection failed:', e.message)
-    return false
-  }
-}
-
 // Detect Windows Server — use HW accel disable for compatibility
 function isWindowsServer() {
   try {
@@ -147,7 +116,7 @@ function createWindow() {
   win.once('ready-to-show', () => {
     win.showInactive()
     win.setIgnoreMouseEvents(true, { forward: true })
-    applyCaptureProtection(win.getNativeWindowHandle())
+    win.setContentProtection(true)
     win.webContents.send('opacity-changed', config.opacity ?? DEF_OPACITY)
   })
 
