@@ -1,0 +1,20 @@
+const { contextBridge, ipcRenderer } = require('electron')
+
+contextBridge.exposeInMainWorld('parda', {
+  getNotes: () => ipcRenderer.invoke('get-notes'),
+  saveNotes: (content) => ipcRenderer.invoke('save-notes', content),
+  getClickThrough: () => ipcRenderer.invoke('get-click-through'),
+  toggleClickThrough: () => ipcRenderer.invoke('toggle-click-through'),
+  onToggleUi: (cb) => {
+    ipcRenderer.on('toggle-ui-mode', () => cb())
+  },
+  onClickThroughChanged: (cb) => {
+    ipcRenderer.on('click-through-changed', (_, val) => cb(val))
+  },
+  hideWindow: () => ipcRenderer.invoke('hide-window'),
+  toggleCaptureProtection: () => ipcRenderer.invoke('toggle-capture-protection'),
+  getCaptureProtection: () => ipcRenderer.invoke('get-capture-protection'),
+  onCaptureProtectionChanged: (cb) => {
+    ipcRenderer.on('capture-protection-changed', (_, val) => cb(val))
+  }
+})

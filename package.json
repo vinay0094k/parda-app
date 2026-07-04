@@ -1,0 +1,39 @@
+{
+  "name": "parda-app",
+  "version": "1.0.0",
+  "description": "Stealth transparent note-taking overlay for Windows 10/11 and Windows Server 2022+",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder build --win",
+    "build:portable": "electron-builder build --win portable"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.parda.app",
+    "productName": "Parda",
+    "directories": {
+      "output": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Parda",
+      "runAfterFinish": false
+    }
+  },
+  "dependencies": {
+    "koffi": "^3.1.0"
+  }
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parda</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="card">
+    <div id="header">
+      <div id="status-row">
+        <span id="lock-icon">🔓</span>
+        <span id="lock-label">click-through</span>
+      </div>
+      <div id="header-actions">
+        <button id="btn-lock" title="Toggle click-through (Ctrl+Shift+I)">🔓</button>
+        <button id="btn-shield" title="Toggle capture protection (Ctrl+Shift+H)">🛡️</button>
+        <button id="btn-hide" title="Hide (Ctrl+Shift+P)">—</button>
+      </div>
+    </div>
+    <textarea id="note-input" placeholder="Type a note..." spellcheck="false"></textarea>
+    <div id="footer">
+      <span id="saved-indicator"></span>
+    </div>
+  </div>
+  <div id="hotkey-hint">Ctrl+Shift+P show/hide · Ctrl+Shift+I toggle interaction · Ctrl+Shift+H toggle capture protection · Ctrl+Shift+Q quit</div>
+  <script src="app.js"></script>
+</body>
+</html>
