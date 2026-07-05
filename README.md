@@ -32,3 +32,5 @@ npm start
 ```bash
 npm run build
 ```
+
+After building, the installer is in `build/`. Run it (e.g. `start "" "build/Parda Setup 1.0.0.exe"`) to install the application.
