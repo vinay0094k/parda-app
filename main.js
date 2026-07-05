@@ -7,34 +7,44 @@ const DEF_OPACITY = 0.75
 
 // Capture protection via PowerShell P/Invoke (no native modules required)
 function enableCaptureProtection() {
-  if (process.platform !== 'win32') return
-  if (!win) return
+  if (process.platform !== 'win32') {
+    console.log('[parda] Capture protection skipped (non-Windows)')
+    return
+  }
+  if (!win) {
+    console.log('[parda] Capture protection skipped (no window)')
+    return
+  }
   try {
     const buf = win.getNativeWindowHandle()
+    if (!buf || buf.length === 0) {
+      console.log('[parda] Capture protection skipped (no handle)')
+      return
+    }
     const hwnd = process.arch === 'x64'
       ? buf.readBigUInt64LE(0).toString()
       : buf.readUInt32LE(0).toString()
+    console.log('[parda] HWND:', hwnd)
 
-    const script = [
-      'Add-Type -TypeDefinition @"',
-      'using System;',
-      'using System.Runtime.InteropServices;',
-      'public class PardaProtect {',
-      '    [DllImport("user32.dll")]',
-      '    public static extern bool SetWindowDisplayAffinity(IntPtr hwnd, uint dwAffinity);',
-      '}',
-      '"@',
-      '[PardaProtect]::SetWindowDisplayAffinity([IntPtr]::new(' + hwnd + '), 0x11)'
-    ].join('\n')
-
-    const tmpFile = path.join(app.getPath('temp'), `parda-protect-${Date.now()}.ps1`)
-    fs.writeFileSync(tmpFile, script, 'utf-8')
-    execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${tmpFile}"`, { timeout: 10000 })
-    fs.unlinkSync(tmpFile)
-    console.log('[parda] Capture protection applied via PowerShell (WDA_EXCLUDEFROMCAPTURE)')
+    // Use single-quoted PowerShell string so double quotes inside C# are literal
+    const script = `Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class P { [DllImport("user32.dll")] public static extern bool SetWindowDisplayAffinity(IntPtr h, uint a); }'; [P]::SetWindowDisplayAffinity([IntPtr]::new(${hwnd}), 0x11)`
+    const encoded = Buffer.from(script, 'utf-16le').toString('base64')
+    const result = execSync(
+      `powershell -NoProfile -NonInteractive -EncodedCommand ${encoded}`,
+      { timeout: 10000, encoding: 'utf-8' }
+    ).trim()
+    console.log('[parda] PowerShell result:', result || '(empty)')
   } catch (e) {
-    console.error('[parda] PowerShell failed, falling back to Electron API:', e.message)
-    try { if (win) win.setContentProtection(true) } catch {}
+    console.error('[parda] PowerShell failed:', e.message)
+    console.log('[parda] Trying Electron setContentProtection fallback...')
+    try {
+      if (win) {
+        win.setContentProtection(true)
+        console.log('[parda] Electron setContentProtection applied')
+      }
+    } catch (e2) {
+      console.error('[parda] Electron fallback also failed:', e2.message)
+    }
   }
 }
 
@@ -150,7 +160,8 @@ function createWindow() {
   win.once('ready-to-show', () => {
     win.showInactive()
     win.setIgnoreMouseEvents(true, { forward: true })
-    enableCaptureProtection()
+    // Small delay to ensure window handle is fully initialized
+    setTimeout(enableCaptureProtection, 500)
     win.webContents.send('opacity-changed', config.opacity ?? DEF_OPACITY)
   })
 
