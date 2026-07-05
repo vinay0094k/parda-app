@@ -8,7 +8,7 @@ Built with Electron. Features a click-through always-on-top translucent window w
 
 - **Always-on-top** transparent blur overlay
 - **Click-through mode** — mouse passes through to underlying windows
-- **Screen capture protection** — Parda won't appear in screen shares or recordings (Win32 `WDA_EXCLUDEFROMCAPTURE`)
+- **Always-on screen capture protection** — Parda is invisible in screen shares and recordings (Win32 `WDA_EXCLUDEFROMCAPTURE`, no toggle needed)
 - **Auto-saving** — notes persist across sessions
 - **Global hotkeys**
 
@@ -18,7 +18,6 @@ Built with Electron. Features a click-through always-on-top translucent window w
 |---|---|
 | `Ctrl+Shift+P` | Show / hide |
 | `Ctrl+Shift+I` | Toggle click-through / interactive mode |
-| `Ctrl+Shift+H` | Toggle screen capture protection |
 | `Ctrl+Shift+Q` | Quit |
 
 ## Development
