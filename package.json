@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "prebuild": "cd helpers && GOOS=windows GOARCH=amd64 go build -o parda-protect.exe ./protect/",
     "build": "electron-builder build --win",
     "build:portable": "electron-builder build --win portable"
   },
@@ -40,6 +41,10 @@
       {
         "from": "prompts",
         "to": "prompts"
+      },
+      {
+        "from": "helpers/parda-protect.exe",
+        "to": "parda-protect.exe"
       }
     ]
   },

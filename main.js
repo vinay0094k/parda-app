@@ -5,7 +5,7 @@ const { execSync } = require('child_process')
 
 const DEF_OPACITY = 0.75
 
-// Capture protection via PowerShell P/Invoke (no native modules required)
+// Capture protection via compiled Go helper (no PowerShell, no native modules)
 function enableCaptureProtection() {
   if (process.platform !== 'win32') {
     console.log('[parda] Capture protection skipped (non-Windows)')
@@ -26,16 +26,20 @@ function enableCaptureProtection() {
       : buf.readUInt32LE(0).toString()
     console.log('[parda] HWND:', hwnd)
 
-    // Use single-quoted PowerShell string so double quotes inside C# are literal
-    const script = `Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class P { [DllImport("user32.dll")] public static extern bool SetWindowDisplayAffinity(IntPtr h, uint a); }'; [P]::SetWindowDisplayAffinity([IntPtr]::new(${hwnd}), 0x11)`
-    const encoded = Buffer.from(script, 'utf-16le').toString('base64')
-    const result = execSync(
-      `powershell -NoProfile -NonInteractive -EncodedCommand ${encoded}`,
-      { timeout: 10000, encoding: 'utf-8' }
-    ).trim()
-    console.log('[parda] PowerShell result:', result || '(empty)')
+    // Find the helper exe: resources dir (production) or project dir (dev)
+    let exePath = process.resourcesPath
+      ? path.join(process.resourcesPath, 'parda-protect.exe')
+      : path.join(__dirname, 'helpers', 'parda-protect.exe')
+
+    if (!fs.existsSync(exePath)) {
+      console.log('[parda] Helper not found at', exePath)
+      throw new Error('helper not found')
+    }
+
+    execSync(`"${exePath}" ${hwnd}`, { timeout: 5000 })
+    console.log('[parda] Capture protection applied (WDA_EXCLUDEFROMCAPTURE)')
   } catch (e) {
-    console.error('[parda] PowerShell failed:', e.message)
+    console.error('[parda] Helper failed:', e.message)
     console.log('[parda] Trying Electron setContentProtection fallback...')
     try {
       if (win) {
